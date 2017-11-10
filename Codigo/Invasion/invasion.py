@@ -4,58 +4,25 @@ import os
 import time
 
 
-#Creo algunos colores
+#Creo algunos variables fijas
 NEGRO = ( 0, 0, 0 )
 WHITE = (255, 255, 255)
 alto = 768
 ancho = 1024
 
-#Creo botones
 
-
-
-
-#Clase de nave
 class Nave(pygame.sprite.Sprite):
 	"""docstring for Nave"""
-	def __init__(self):
+	def __init__(self,imagenA, imagenB):
 		pygame.sprite.Sprite.__init__(self)
-		self.ImagenNave = pygame.image.load("Imagenes/nave1-1_corte.png").convert_alpha()
+		self.ImagenNave = imagenA
+		self.ImagenNaveB = imagenB
 		self.rect = self.ImagenNave.get_rect()
 		self.rect.centerx = ancho/2
 		self.rect.centery = alto -75
 		self.listaDisparo = []
 		self.listaDisparoBomba = []
-		self.cant_colisiones = 0
-
-	def disparar(self,x,y):
-		miDisparo = Disparo(x,y)
-		self.listaDisparo.append(miDisparo)
-
-	def dispararBomba(self,x,y):
-		miDisparoBomba = Bomba(x,y)
-		self.listaDisparoBomba.append(miDisparoBomba)
-
-	def dibujar(self, superficie):
-		superficie.blit(self.ImagenNave, self.rect)
-	
-	def movimiento(self):
-		if self.rect.left <= 0:
-			self.rect.left = 0
-		if self.rect.right > 1024:
-			self.rect.right = 1024
-
-class Nave2(pygame.sprite.Sprite):
-	"""docstring for Nave"""
-	def __init__(self):
-		pygame.sprite.Sprite.__init__(self)
-		self.ImagenNave = pygame.image.load("Imagenes/nave2-1.png").convert_alpha()
-		self.rect = self.ImagenNave.get_rect()
-		self.rect.centerx = ancho/2
-		self.rect.centery = alto -125
-		self.listaDisparo = []
-		self.listaDisparoBomba = []
-		self.Vida = True
+		self.cant_colisiones = 200
 
 	def disparar(self,x,y):
 		miDisparo = Disparo(x,y)
@@ -165,7 +132,7 @@ class Boss(pygame.sprite.Sprite):
         self.Vida = True
         self.speed = [6,6]
         self.tiempoCambio = 1
-        self.cant_colisiones = 0
+        self.cant_colisiones = 500
         self.listaDisparo = []
     def comportamiento(self,tiempo):
     	if self.tiempoCambio == tiempo:
@@ -184,8 +151,6 @@ class Boss(pygame.sprite.Sprite):
         if self.rect.top < 0 or self.rect.bottom > 768:
             self.speed[1] = -self.speed[1]
         self.rect.move_ip((self.speed[0], self.speed[1]))
-
-
 		
 def menu_inicio():
 	os.environ['SDL_VIDEO_CENTERED'] = '1'
@@ -322,6 +287,10 @@ def selecciona_jugador():
 	fin = False
 	reloj = pygame.time.Clock()
 	imagen_fondo = pygame.image.load("Imagenes/menuseleccion.JPG").convert()
+	imagenNave1A = pygame.image.load("Imagenes/nave1-1_corte.PNG").convert_alpha()
+	imagenNave1B = pygame.image.load("Imagenes/nave1-2.PNG").convert_alpha()
+	imagenNave2A = pygame.image.load("Imagenes/nave2-1.png").convert_alpha()
+	imagenNave2B = pygame.image.load("Imagenes/nave2-2.png").convert_alpha()
 	
 	while not fin:
 		for evento in pygame.event.get():
@@ -334,10 +303,9 @@ def selecciona_jugador():
 				x_mouse, y_mouse = pygame.mouse.get_pos()
 				print (y_mouse)
 				if 296 <= x_mouse <= 494 and 395 <= y_mouse <= 535:
-					main()
+					main(imagenNave1A,imagenNave1B)
 				elif 570 <= x_mouse <= 734 and 413 <= y_mouse <= 511:
-					main2()
-				
+					main(imagenNave2A,imagenNave2B)
 		pantalla.blit(imagen_fondo,[0,0])
 
 		pygame.display.flip()
@@ -417,7 +385,7 @@ def ganaste():
 
 	pygame.quit()
 
-def main():
+def main(a,b):
 	dimensiones = (ancho,alto)
 
 	pantalla = pygame.display.set_mode(dimensiones)
@@ -441,7 +409,7 @@ def main():
 	#Defino las imagenes a cargar
 	imagen_fondo = pygame.image.load("Imagenes/fondo_juego.JPG").convert()
 	
-	jugador_1 = Nave()
+	jugador_1 = Nave(a,b)
 	disparo =Disparo(ancho/2, alto -50)
 	disparoBomba =Bomba(ancho/2, alto -50)
 
@@ -491,8 +459,12 @@ def main():
 			obj.comportamiento(Tiempo)
 			for y in jugador_1.listaDisparo:
 				if obj.rect.colliderect(y.rect):
-					jugador_1.listaDisparo.remove(y)
-					listaEnemigo.remove(obj)
+					sonido_colision.play()
+					if obj in listaEnemigo:
+						listaEnemigo.remove(obj)
+					if y in jugador_1.listaDisparo:
+						jugador_1.listaDisparo.remove(y)
+					
 						   	
 		if len(jugador_1.listaDisparo)>0:
 			for x in jugador_1.listaDisparo:
@@ -522,119 +494,37 @@ def main():
 			boss.comportamiento(Tiempo)
 
 			if jugador_1.rect.colliderect(boss.rect):
-				jugador_1.cant_colisiones+=1
-				print (jugador_1.cant_colisiones)
-				if jugador_1.cant_colisiones == 500:
+				jugador_1.cant_colisiones-=1
+				
+				if jugador_1.cant_colisiones == 0:
 					perdiste()
 
 			for y in jugador_1.listaDisparo:
 				if boss.rect.colliderect(y.rect):
-					boss.cant_colisiones+=1
+					boss.cant_colisiones-=1
 					jugador_1.listaDisparo.remove(y)
-					print(boss.cant_colisiones)
-					if boss.cant_colisiones >= 100:
+					
+					if boss.cant_colisiones <= 0:
 						ganaste()
 						
 			for z in jugador_1.listaDisparoBomba:
 				if boss.rect.colliderect(z.rect):
-					boss.cant_colisiones+=5
+					boss.cant_colisiones-=5
 					jugador_1.listaDisparoBomba.remove(z)
-					print(boss.cant_colisiones)
-					if boss.cant_colisiones >= 100:
+					
+					if boss.cant_colisiones <= 0:
 						ganaste()
 
 
 
-		#contador = Fuente.render(str(aux2),0,(255,0,255))
-		#pantalla.blit(contador,(970,10))
+		contador = Fuente.render('VIDA JUGADOR: '+str(jugador_1.cant_colisiones),0,(255,0,255))
+		contador2 = Fuente.render('VIDA ENEMIGO: ' +str(boss.cant_colisiones),0,(255,0,255))
+		pantalla.blit(contador,(780,728))
+		pantalla.blit(contador2,(780,10))
 		pygame.display.flip()
 
 
 
 	pygame.quit()
-
-def main2():
-	
-	dimensiones = (ancho,alto)
-
-	pantalla = pygame.display.set_mode(dimensiones)
-
-	pygame.display.set_caption("Invasión")
-	#Variable de cierre
-	fin = False
-	
-	
-	reloj = pygame.time.Clock()
-	pygame.key.set_repeat(10, 50)  # Activa repeticion de teclas
-	#Defino la biblioteca de sonidos
-	sonido_disparo = pygame.mixer.Sound("Sonidos/Blip 003.WAV")
-	sonido_disparoBomba = pygame.mixer.Sound("Sonidos/Blip 004.WAV")
-
-	#Defino las imagenes a cargar
-	imagen_fondo = pygame.image.load("Imagenes/fondo_juego.JPG").convert()
-	
-	jugador_2 = Nave2()
-	disparo =Disparo(ancho/2, alto -50)
-	disparoBomba =Bomba(ancho/2, alto -50)
-
-	listaEnemigo = [] 
-	for i in range(50):
-		listaEnemigo.append(Enemigo())
-	
-
-	while not fin:
-		jugador_2.movimiento()
-		disparo.recorrido()
-		disparoBomba.recorrido()
-		for evento in pygame.event.get():
-			if evento.type == pygame.QUIT:
-				fin = True
-			elif evento.type == pygame.KEYDOWN:
-				if evento.key == pygame.K_SPACE:
-					x,y=jugador_2.rect.center
-					jugador_2.disparar(x,y)
-					sonido_disparo.play()
-					disparo.dibujar(pantalla)
-				elif evento.key == pygame.K_LCTRL:
-					x2,y2 = jugador_2.rect.center
-					jugador_2.dispararBomba(x2,y2)
-					sonido_disparoBomba.play()
-					disparoBomba.dibujar(pantalla)
-				elif evento.key == pygame.K_ESCAPE:
-					pausa()
-				elif evento.key == pygame.K_RIGHT:
-					jugador_2.rect.centerx += 20
-				elif evento.key == pygame.K_LEFT:
-					jugador_2.rect.centerx -= 20
-
-		pantalla.blit(imagen_fondo,[0,0])
-		jugador_2.dibujar(pantalla)
-				
-		for obj in listaEnemigo:
-			obj.dibujar(pantalla)
-			obj.update()
-		
-		   	
-		if len(jugador_2.listaDisparo)>0:
-			for x in jugador_2.listaDisparo:
-				x.dibujar(pantalla)
-				x.recorrido()
-				if x.rect.top < 100:
-					jugador_2.listaDisparo.remove(x)
-
-		if len(jugador_2.listaDisparoBomba)>0:
-			for x in jugador_2.listaDisparoBomba:
-				x.dibujar(pantalla)
-				x.recorrido()
-				if x.rect.top < 100:
-					jugador_2.listaDisparoBomba.remove(x)
-	
-		pygame.display.flip()
-		reloj.tick(60)
-
-
-
-	pygame.quit()
-
 
 menu_inicio()
