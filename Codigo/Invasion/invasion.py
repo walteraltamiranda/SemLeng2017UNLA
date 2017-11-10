@@ -60,9 +60,26 @@ class Disparo(pygame.sprite.Sprite):
          
     def dibujar(self, superficie):
         superficie.blit(self.imageDisparo, self.rect)
-    #def colision(self, objetivo):
-    #    if self.rect.colliderect(objetivo.rect):
-    #        self.speed[0] = -self.speed[0]
+    
+class DisparoEnemigo(pygame.sprite.Sprite):
+    def __init__(self,posX,posY):
+        pygame.sprite.Sprite.__init__(self)
+        
+        self.imageDisparo = pygame.image.load("Imagenes/disparo.jpg")
+        
+        self.rect = self.imageDisparo.get_rect()
+        
+        self.velocidadDisparo =6
+        
+        self.rect.bottom = posY
+        self.rect.left = posX
+        self.speed = [3,3]
+        
+    def recorrido(self):
+        self.rect.bottom = self.rect.bottom + self.velocidadDisparo   
+         
+    def dibujar(self, superficie):
+        superficie.blit(self.imageDisparo, self.rect)
 
 class Bomba(pygame.sprite.Sprite):
     def __init__(self,posX,posY):
@@ -98,6 +115,7 @@ class Enemigo(pygame.sprite.Sprite):
         self.Vida = True
         self.speed = [3,3]
         self.tiempoCambio = 1
+        self.listaDisparo = []
 
     def comportamiento(self,tiempo):
     	if self.tiempoCambio == tiempo:
@@ -117,6 +135,10 @@ class Enemigo(pygame.sprite.Sprite):
             self.speed[1] = -self.speed[1]
         self.rect.move_ip((self.speed[0], self.speed[1]))
 
+    def disparar(self,x,y):
+    	miDisparo = DisparoEnemigo(x,y)
+    	self.listaDisparo.append(miDisparo)
+
 class Boss(pygame.sprite.Sprite):
     
     def __init__(self):
@@ -132,7 +154,7 @@ class Boss(pygame.sprite.Sprite):
         self.Vida = True
         self.speed = [6,6]
         self.tiempoCambio = 1
-        self.cant_colisiones = 500
+        self.cant_colisiones = 200
         self.listaDisparo = []
     def comportamiento(self,tiempo):
     	if self.tiempoCambio == tiempo:
@@ -321,7 +343,8 @@ def pausa():
 	reloj = pygame.time.Clock()
 	pantalla.fill(NEGRO)	
 	
-	imagen_pausa = pygame.image.load("Imagenes/pausa.PNG").convert_alpha()				
+	imagen_pausa = pygame.image.load("Imagenes/pausa.PNG").convert_alpha()
+	imagen_volver = pygame.image.load("Imagenes/volveratras.PNG").convert_alpha()				
 	while not fin:
 		for evento in pygame.event.get():
 			if evento.type == pygame.QUIT:
@@ -330,8 +353,9 @@ def pausa():
 				if evento.key == pygame.K_ESCAPE:
 					return 0
 		
-		pantalla.blit(imagen_pausa,[270,350])
-		
+		pantalla.blit(imagen_pausa,[270,250])
+		pantalla.blit(imagen_volver,[290,600])
+
 		pygame.display.flip()
 		reloj.tick(60)
 
@@ -345,7 +369,9 @@ def perdiste():
 	reloj = pygame.time.Clock()
 	pantalla.fill(NEGRO)	
 	
-	imagen_perdiste= pygame.image.load("Imagenes/perder.PNG").convert_alpha()				
+	imagen_perdiste= pygame.image.load("Imagenes/perder.PNG").convert_alpha()
+	imagen_continuar= pygame.image.load("Imagenes/continuar.PNG").convert_alpha()
+
 	while not fin:
 		for evento in pygame.event.get():
 			if evento.type == pygame.QUIT:
@@ -355,6 +381,7 @@ def perdiste():
 					selecciona_jugador()
 		
 		pantalla.blit(imagen_perdiste,[150,200])
+		pantalla.blit(imagen_continuar,[150,650])
 		
 		pygame.display.flip()
 		reloj.tick(60)
@@ -369,7 +396,9 @@ def ganaste():
 	reloj = pygame.time.Clock()
 	pantalla.fill(NEGRO)	
 	
-	imagen_perdiste= pygame.image.load("Imagenes/ganar.PNG").convert_alpha()				
+	imagen_ganaste= pygame.image.load("Imagenes/ganar.PNG").convert_alpha()
+	imagen_continuar= pygame.image.load("Imagenes/continuar.PNG").convert_alpha()
+				
 	while not fin:
 		for evento in pygame.event.get():
 			if evento.type == pygame.QUIT:
@@ -378,8 +407,8 @@ def ganaste():
 				if evento.key == pygame.K_s:
 					selecciona_jugador()
 		
-		pantalla.blit(imagen_perdiste,[150,200])
-		
+		pantalla.blit(imagen_ganaste,[150,200])
+		pantalla.blit(imagen_continuar,[150,650])		
 		pygame.display.flip()
 		reloj.tick(60)
 
@@ -412,6 +441,7 @@ def main(a,b):
 	jugador_1 = Nave(a,b)
 	disparo =Disparo(ancho/2, alto -50)
 	disparoBomba =Bomba(ancho/2, alto -50)
+	disparoEnemigo = DisparoEnemigo(ancho/2, alto-700)
 
 	listaEnemigo = [] 
 	for i in range(50):
@@ -425,6 +455,7 @@ def main(a,b):
 		jugador_1.movimiento()
 		disparo.recorrido()
 		disparoBomba.recorrido()
+		disparoEnemigo.recorrido()
 		Tiempo = int(pygame.time.get_ticks()/1000)
 		
 		for evento in pygame.event.get():
@@ -457,6 +488,18 @@ def main(a,b):
 			obj.dibujar(pantalla)
 			obj.update()
 			obj.comportamiento(Tiempo)
+			
+			if Tiempo % 5 ==0:
+				x,y=obj.rect.center
+				obj.disparar(x,y)
+
+			if len(obj.listaDisparo)>0:
+				for x in obj.listaDisparo:
+					x.dibujar(pantalla)
+					x.recorrido()
+
+				if x.rect.colliderect(jugador_1.rect):
+					jugador_1.cant_colisiones-=1
 			for y in jugador_1.listaDisparo:
 				if obj.rect.colliderect(y.rect):
 					sonido_colision.play()
@@ -465,7 +508,9 @@ def main(a,b):
 					if y in jugador_1.listaDisparo:
 						jugador_1.listaDisparo.remove(y)
 					
-						   	
+		
+
+
 		if len(jugador_1.listaDisparo)>0:
 			for x in jugador_1.listaDisparo:
 				x.dibujar(pantalla)
@@ -496,8 +541,8 @@ def main(a,b):
 			if jugador_1.rect.colliderect(boss.rect):
 				jugador_1.cant_colisiones-=1
 				
-				if jugador_1.cant_colisiones == 0:
-					perdiste()
+				#if jugador_1.cant_colisiones == 0:
+				#	perdiste()
 
 			for y in jugador_1.listaDisparo:
 				if boss.rect.colliderect(y.rect):
@@ -515,7 +560,8 @@ def main(a,b):
 					if boss.cant_colisiones <= 0:
 						ganaste()
 
-
+		if jugador_1.cant_colisiones ==0:
+			perdiste()				
 
 		contador = Fuente.render('VIDA JUGADOR: '+str(jugador_1.cant_colisiones),0,(255,0,255))
 		contador2 = Fuente.render('VIDA ENEMIGO: ' +str(boss.cant_colisiones),0,(255,0,255))
